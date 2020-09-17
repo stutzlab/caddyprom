@@ -18,11 +18,8 @@ const (
 )
 
 var (
-	requestCount    *prometheus.CounterVec
-	requestDuration *prometheus.HistogramVec
-	responseSize    *prometheus.HistogramVec
-	responseStatus  *prometheus.CounterVec
-	responseLatency *prometheus.HistogramVec
+	requestDuration *prometheus.SummaryVec
+	responseSize    *prometheus.SummaryVec
 )
 
 func (m *Metrics) initMetrics(ctx caddy.Context) error {
@@ -62,52 +59,19 @@ func (m *Metrics) initMetrics(ctx caddy.Context) error {
 }
 
 func (m *Metrics) registerMetrics(namespace, subsystem string) {
-	if m.latencyBuckets == nil {
-		m.latencyBuckets = []float64{.05, .2, 1, 3, 10, 60}
-	}
-	if m.sizeBuckets == nil {
-		m.sizeBuckets = []float64{0, 500, 5000, 50000, 500000, 5000000}
-	}
-
-	// TODO: add "handler" and probably others
 	httpLabels := []string{"code", "method", "path"}
 
-	requestCount = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: namespace,
-		Subsystem: subsystem,
-		Name:      "request_count_total",
-		Help:      "Counter of HTTP(S) requests made.",
-	}, httpLabels)
-
-	requestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	requestDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
 		Name:      "request_duration_seconds",
 		Help:      "Histogram of the time (in seconds) each request took.",
-		Buckets:   m.latencyBuckets,
 	}, httpLabels)
 
-	responseSize = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	responseSize = promauto.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
 		Name:      "response_size_bytes",
 		Help:      "Size of the returns response in bytes.",
-		Buckets:   m.sizeBuckets,
 	}, httpLabels)
-
-	responseStatus = promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: namespace,
-		Subsystem: subsystem,
-		Name:      "response_status_count_total",
-		Help:      "Counter of response status codes.",
-	}, httpLabels)
-
-	// TODO: I guess this should be time-to-first-byte?
-	// responseLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
-	// 	Namespace: namespace,
-	// 	Subsystem: subsystem,
-	// 	Name:      "response_latency_seconds",
-	// 	Help:      "Histogram of the time (in seconds) until the first write for each request.",
-	// 	Buckets:   m.latencyBuckets,
-	// }, httpLabels)
 }
